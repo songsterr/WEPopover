@@ -34,6 +34,10 @@
 	WEPopoverContainerViewProperties *containerViewProperties;
 	id <NSObject> context;
 	NSArray *passthroughViews;	
+    
+    CGRect anchorRect;
+    UIView *anchorView;
+    UIPopoverArrowDirection permittedArrowDirections;
 }
 
 @property(nonatomic, retain) UIViewController *contentViewController;

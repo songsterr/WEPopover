@@ -145,19 +145,18 @@ permittedArrowDirections:(UIPopoverArrowDirection)permittedArrowDirections
 	}
 }
 
-- (void)determineGeometryForSize:(CGSize)theSize anchorRect:(CGRect)anchorRect displayArea:(CGRect)displayArea permittedArrowDirections:(UIPopoverArrowDirection)supportedArrowDirections {	
+- (void)determineGeometryForSize:(CGSize)theContentSize anchorRect:(CGRect)anchorRect displayArea:(CGRect)displayArea permittedArrowDirections:(UIPopoverArrowDirection)supportedArrowDirections {	
 	
 	//Determine the frame, it should not go outside the display area
 	UIPopoverArrowDirection theArrowDirection = UIPopoverArrowDirectionUp;
 	
 	offset =  CGPointZero;
-	bgRect = CGRectZero;
+	bgRect = CGRectNull;
 	arrowRect = CGRectZero;
 	arrowDirection = UIPopoverArrowDirectionUnknown;
 	
 	CGFloat biggestSurface = 0.0f;
-	CGFloat currentMinMargin = 0.0f;
-	
+
 	UIImage *upArrowImage = [UIImage imageNamed:properties.upArrowImageName];
 	UIImage *downArrowImage = [UIImage imageNamed:properties.downArrowImageName];
 	UIImage *leftArrowImage = [UIImage imageNamed:properties.leftArrowImageName];
@@ -167,176 +166,227 @@ permittedArrowDirections:(UIPopoverArrowDirection)permittedArrowDirections
 		
 		if ((supportedArrowDirections & theArrowDirection)) {
 			
-			CGRect theBgRect = CGRectZero;
+            CGSize theSize = theContentSize;
+            CGRect theBgRect = CGRectZero;
 			CGRect theArrowRect = CGRectZero;
 			CGPoint theOffset = CGPointZero;
 			CGFloat xArrowOffset = 0.0;
 			CGFloat yArrowOffset = 0.0;
 			CGPoint anchorPoint = CGPointZero;
+            CGFloat shift = 0.0;
 			
 			switch (theArrowDirection) {
 				case UIPopoverArrowDirectionUp:
 					
 					anchorPoint = CGPointMake(CGRectGetMidX(anchorRect), CGRectGetMaxY(anchorRect));
 					
+                    // Check if anchorPoint is under the displayArea (due to keyboard showing)
+                    if (anchorPoint.y > CGRectGetMaxY(displayArea)) {
+                        // Skip this test since we need ArrowDirectionDown in this case.
+                        NSAssert(supportedArrowDirections & UIPopoverArrowDirectionDown, @"ArrowDirectionDown is needed but wasn't allowed");
+                        break;
+                    }
+                    
 					xArrowOffset = theSize.width / 2 - upArrowImage.size.width / 2;
 					yArrowOffset = properties.topBgMargin - upArrowImage.size.height;
 					
 					theOffset = CGPointMake(anchorPoint.x - xArrowOffset - upArrowImage.size.width / 2, anchorPoint.y  - yArrowOffset);
-					theBgRect = CGRectMake(0, 0, theSize.width, theSize.height);
 					
-					if (theOffset.x < 0) {
-						xArrowOffset += theOffset.x;
-						theOffset.x = 0;
-					} else if (theOffset.x + theSize.width > displayArea.size.width) {
-						xArrowOffset += (theOffset.x + theSize.width - displayArea.size.width);
-						theOffset.x = displayArea.size.width - theSize.width;
+                    // If going past the right bounds, shit left
+                    if (theOffset.x + theSize.width > CGRectGetMaxX(displayArea)) {
+                        shift = CGRectGetMaxX(displayArea) - (theOffset.x + theSize.width);
+                        xArrowOffset -= shift;
+                        theOffset.x += shift;
+                    } 
+                    // If going past the left bounds, shift right
+					if (theOffset.x < CGRectGetMinX(displayArea)) {
+                        shift = CGRectGetMinX(displayArea) - theOffset.x;
+                        xArrowOffset -= shift;
+                        theOffset.x += shift;
 					}
-					
+                    // If still going past right, resize width
+                    if (theOffset.x + theSize.width > CGRectGetMaxX(displayArea)) {
+                        shift = CGRectGetMaxX(displayArea) - (theOffset.x + theSize.width);
+                        theSize.width -= shift;
+                    } 
+                    // If going past the bottom bounds, resize height
+                    if (theOffset.y + theSize.height > CGRectGetMaxY(displayArea)) {
+                        shift = theOffset.y + theSize.height - CGRectGetMaxY(displayArea);
+                        theSize.height -= shift;
+                    }
+                    
 					//Cap the arrow offset
 					xArrowOffset = MAX(xArrowOffset, properties.leftBgMargin + properties.arrowMargin);
 					xArrowOffset = MIN(xArrowOffset, theSize.width - properties.rightBgMargin - properties.arrowMargin - upArrowImage.size.width);
 					
 					theArrowRect = CGRectMake(xArrowOffset, yArrowOffset, upArrowImage.size.width, upArrowImage.size.height);
+                    theBgRect = CGRectMake(0, 0, theSize.width, theSize.height);
 					
 					break;
+                    
+                    
 				case UIPopoverArrowDirectionDown:
 					
 					anchorPoint = CGPointMake(CGRectGetMidX(anchorRect), CGRectGetMinY(anchorRect));
 					
+                    // Check if anchorPoint is under the displayArea (due to keyboard showing)
+                    if (anchorPoint.y > CGRectGetMaxY(displayArea)) {
+                        // Shift the point to the visible area
+                        anchorPoint.y = CGRectGetMaxY(displayArea);
+                    }
+                    
 					xArrowOffset = theSize.width / 2 - downArrowImage.size.width / 2;
 					yArrowOffset = theSize.height - properties.bottomBgMargin;
 					
 					theOffset = CGPointMake(anchorPoint.x - xArrowOffset - downArrowImage.size.width / 2, anchorPoint.y - yArrowOffset - downArrowImage.size.height);
-					theBgRect = CGRectMake(0, 0, theSize.width, theSize.height);
 					
-					if (theOffset.x < 0) {
-						xArrowOffset += theOffset.x;
-						theOffset.x = 0;
-					} else if (theOffset.x + theSize.width > displayArea.size.width) {
-						xArrowOffset += (theOffset.x + theSize.width - displayArea.size.width);
-						theOffset.x = displayArea.size.width - theSize.width;
+					// If going past the right bounds, shit left
+                    if (theOffset.x + theSize.width > CGRectGetMaxX(displayArea)) {
+                        shift = CGRectGetMaxX(displayArea) - (theOffset.x + theSize.width);
+                        xArrowOffset -= shift;
+                        theOffset.x += shift;
+                    } 
+                    // If going past the left bounds, shift right
+					if (theOffset.x < CGRectGetMinX(displayArea)) {
+                        shift = CGRectGetMinX(displayArea) - theOffset.x;
+                        xArrowOffset -= shift;
+                        theOffset.x += shift;
 					}
+                    // If still going past right, resize width
+                    if (theOffset.x + theSize.width > CGRectGetMaxX(displayArea)) {
+                        shift = CGRectGetMaxX(displayArea) - (theOffset.x + theSize.width);
+                        theSize.width -= shift;
+                    } 
+                    // If going past the top bounds, resize height and shift offset
+                    if (theOffset.y < CGRectGetMinY(displayArea)) {
+                        shift = CGRectGetMinY(displayArea) - theOffset.y;
+                        theSize.height -= shift;
+                        theOffset.y += shift;
+                        yArrowOffset -= shift;
+                    }
 					
 					//Cap the arrow offset
 					xArrowOffset = MAX(xArrowOffset, properties.leftBgMargin + properties.arrowMargin);
 					xArrowOffset = MIN(xArrowOffset, theSize.width - properties.rightBgMargin - properties.arrowMargin - downArrowImage.size.width);
 					
 					theArrowRect = CGRectMake(xArrowOffset , yArrowOffset, downArrowImage.size.width, downArrowImage.size.height);
+                    theBgRect = CGRectMake(0, 0, theSize.width, theSize.height);
 					
 					break;
+                    
+                    
 				case UIPopoverArrowDirectionLeft:
 					
 					anchorPoint = CGPointMake(CGRectGetMaxX(anchorRect), CGRectGetMidY(anchorRect));
 					
+                    // Check if anchorPoint is under the displayArea (due to keyboard showing)
+                    if (anchorPoint.y > CGRectGetMaxY(displayArea)) {
+                        // Skip this test since we need ArrowDirectionDown in this case.
+                        NSAssert(supportedArrowDirections & UIPopoverArrowDirectionDown, @"ArrowDirectionDown is needed but wasn't allowed");
+                        break;
+                    }
+                    
 					xArrowOffset = properties.leftBgMargin - leftArrowImage.size.width;
 					yArrowOffset = theSize.height / 2  - leftArrowImage.size.height / 2;
 					
-					theOffset = CGPointMake(anchorPoint.x - xArrowOffset, anchorPoint.y - yArrowOffset - leftArrowImage.size.height / 2);
-					theBgRect = CGRectMake(0, 0, theSize.width, theSize.height);
-					
-					if (theOffset.y < 0) {
-						yArrowOffset += theOffset.y;
-						theOffset.y = 0;
-					} else if (theOffset.y + theSize.height > displayArea.size.height) {
-						yArrowOffset += (theOffset.y + theSize.height - displayArea.size.height);
-						theOffset.y = displayArea.size.height - theSize.height;
-					}
+					theOffset = CGPointMake(anchorPoint.x - xArrowOffset, anchorPoint.y - yArrowOffset - leftArrowImage.size.height / 2);                    
+                    
+                    // If going past the top bounds, shift down
+                    if (theOffset.y < CGRectGetMinY(displayArea)) {
+                        shift = CGRectGetMinY(displayArea) - theOffset.y;
+                        theOffset.y += shift;
+                        yArrowOffset -= shift;
+                    }
+                    // If going past the bottom bounds, shift up
+                    if (theOffset.y + theSize.height > CGRectGetMaxY(displayArea)) {
+                        shift = CGRectGetMaxY(displayArea) - (theOffset.y + theSize.height);
+                        theOffset.y += shift;
+                        yArrowOffset -= shift;
+                    }
+                    // If still going past the top bounds, shift down and resize
+                    if (theOffset.y < CGRectGetMinY(displayArea)) {
+                        shift = CGRectGetMinY(displayArea) - theOffset.y;
+                        theOffset.y += shift;
+                        yArrowOffset -= shift;
+                        theSize.height -= shift;
+                    }
+                    // If going past the right bounds, resize width
+                    if (theOffset.x + theSize.width > CGRectGetMaxX(displayArea)) {
+                        shift = theOffset.x + theSize.width - CGRectGetMaxX(displayArea);
+                        theSize.width -= shift;
+                    } 
 					
 					//Cap the arrow offset
 					yArrowOffset = MAX(yArrowOffset, properties.topBgMargin + properties.arrowMargin);
 					yArrowOffset = MIN(yArrowOffset, theSize.height - properties.bottomBgMargin - properties.arrowMargin - leftArrowImage.size.height);
 					
 					theArrowRect = CGRectMake(xArrowOffset, yArrowOffset, leftArrowImage.size.width, leftArrowImage.size.height);
+                    theBgRect = CGRectMake(0, 0, theSize.width, theSize.height);
 					
 					break;
+                    
+                    
 				case UIPopoverArrowDirectionRight:
 					
 					anchorPoint = CGPointMake(CGRectGetMinX(anchorRect), CGRectGetMidY(anchorRect));
-					
+                    
+                    // Check if anchorPoint is under the displayArea (due to keyboard showing)
+                    if (anchorPoint.y > CGRectGetMaxY(displayArea)) {
+                        // Skip this test since we need ArrowDirectionDown in this case.
+                        NSAssert((supportedArrowDirections & UIPopoverArrowDirectionDown), @"ArrowDirectionDown is needed but wasn't allowed");
+                        break;
+                    }
+                    
 					xArrowOffset = theSize.width - properties.rightBgMargin;
 					yArrowOffset = theSize.height / 2  - rightArrowImage.size.width / 2;
 					
 					theOffset = CGPointMake(anchorPoint.x - xArrowOffset - rightArrowImage.size.width, anchorPoint.y - yArrowOffset - rightArrowImage.size.height / 2);
-					theBgRect = CGRectMake(0, 0, theSize.width, theSize.height);
-					
-					if (theOffset.y < 0) {
-						yArrowOffset += theOffset.y;
-						theOffset.y = 0;
-					} else if (theOffset.y + theSize.height > displayArea.size.height) {
-						yArrowOffset += (theOffset.y + theSize.height - displayArea.size.height);
-						theOffset.y = displayArea.size.height - theSize.height;
-					}
+                    
+                    // If going past the top bounds, shift down
+                    if (theOffset.y < CGRectGetMinY(displayArea)) {
+                        shift = CGRectGetMinY(displayArea) - theOffset.y;
+                        theOffset.y += shift;
+                        yArrowOffset -= shift;
+                    }
+                    // If going past the bottom bounds, shift up
+                    if (theOffset.y + theSize.height > CGRectGetMaxY(displayArea)) {
+                        shift = CGRectGetMaxY(displayArea) - (theOffset.y + theSize.height);
+                        theOffset.y += shift;
+                        yArrowOffset -= shift;
+                    }
+                    // If still going past the top bounds, shift down and resize
+                    if (theOffset.y < CGRectGetMinY(displayArea)) {
+                        shift = CGRectGetMinY(displayArea) - theOffset.y;
+                        theOffset.y += shift;
+                        yArrowOffset -= shift;
+                        theSize.height -= shift;
+                    }
+                    // If going past the left bounds, shift right and resize width
+                    if (theOffset.x < CGRectGetMinX(displayArea)) {
+                        shift = CGRectGetMinX(displayArea) - theOffset.x;
+                        theOffset.x += shift;
+                        xArrowOffset -= shift;
+                        theSize.width -= shift;
+                    } 
 					
 					//Cap the arrow offset
 					yArrowOffset = MAX(yArrowOffset, properties.topBgMargin + properties.arrowMargin);
 					yArrowOffset = MIN(yArrowOffset, theSize.height - properties.bottomBgMargin - properties.arrowMargin - rightArrowImage.size.height);
 					
 					theArrowRect = CGRectMake(xArrowOffset, yArrowOffset, rightArrowImage.size.width, rightArrowImage.size.height);
+                    theBgRect = CGRectMake(0, 0, theSize.width, theSize.height);
 					
 					break;
 			}
 			
-			CGRect bgFrame = CGRectOffset(theBgRect, theOffset.x, theOffset.y);
-			
-			CGFloat minMarginLeft = CGRectGetMinX(bgFrame) - CGRectGetMinX(displayArea);
-			CGFloat minMarginRight = CGRectGetMaxX(displayArea) - CGRectGetMaxX(bgFrame); 
-			CGFloat minMarginTop = CGRectGetMinY(bgFrame) - CGRectGetMinY(displayArea); 
-			CGFloat minMarginBottom = CGRectGetMaxY(displayArea) - CGRectGetMaxY(bgFrame); 
-			
-			if (minMarginLeft < 0) {
-			    // Popover is too wide and clipped on the left; decrease width
-			    // and move it to the right
-			    theOffset.x -= minMarginLeft;
-			    theBgRect.size.width += minMarginLeft;
-			    minMarginLeft = 0;
-			    if (theArrowDirection == UIPopoverArrowDirectionRight) {
-			        theArrowRect.origin.x = CGRectGetMaxX(theBgRect) - properties.rightBgMargin;
-			    }
-			}
-			if (minMarginRight < 0) {
-			    // Popover is too wide and clipped on the right; decrease width.
-			    theBgRect.size.width += minMarginRight;
-			    minMarginRight = 0;
-			    if (theArrowDirection == UIPopoverArrowDirectionLeft) {
-			        theArrowRect.origin.x = CGRectGetMinX(theBgRect) - leftArrowImage.size.width + properties.leftBgMargin;
-			    }
-			}
-			if (minMarginTop < 0) {
-			    // Popover is too high and clipped at the top; decrease height
-			    // and move it down
-			    theOffset.y -= minMarginTop;
-			    theBgRect.size.height += minMarginTop;
-			    minMarginTop = 0;
-			    if (theArrowDirection == UIPopoverArrowDirectionDown) {
-			        theArrowRect.origin.y = CGRectGetMaxY(theBgRect) - properties.bottomBgMargin;
-			    }
-			}
-			if (minMarginBottom < 0) {
-			    // Popover is too high and clipped at the bottom; decrease height.
-			    theBgRect.size.height += minMarginBottom;
-			    minMarginBottom = 0;
-			    if (theArrowDirection == UIPopoverArrowDirectionUp) {
-			        theArrowRect.origin.y = CGRectGetMinY(theBgRect) - upArrowImage.size.height + properties.topBgMargin;
-			    }
-			}
-			bgFrame = CGRectOffset(theBgRect, theOffset.x, theOffset.y);
+			CGFloat surface = fabsf(theBgRect.size.width) * fabsf(theBgRect.size.height);
             
-			CGFloat minMargin = MIN(minMarginLeft, minMarginRight);
-			minMargin = MIN(minMargin, minMarginTop);
-			minMargin = MIN(minMargin, minMarginBottom);
-			
-			// Calculate intersection and surface
-			CGRect intersection = CGRectIntersection(displayArea, bgFrame);
-			CGFloat surface = intersection.size.width * intersection.size.height;
-			
-			if (surface >= biggestSurface && minMargin >= currentMinMargin) {
+			if (surface > biggestSurface) {
 				biggestSurface = surface;
 				offset = theOffset;
 				arrowRect = theArrowRect;
 				bgRect = theBgRect;
 				arrowDirection = theArrowDirection;
-				currentMinMargin = minMargin;
 			}
 		}
 		
@@ -357,6 +407,9 @@ permittedArrowDirections:(UIPopoverArrowDirection)permittedArrowDirections
 			arrowImage = [rightArrowImage retain];
 			break;
 	}
+	
+	NSAssert(!CGRectEqualToRect(bgRect, CGRectNull), @"bgRect is null");
+	
 }
 
 @end

@@ -50,6 +50,7 @@
 @property (nonatomic, retain) WEPopoverContainerViewProperties *containerViewProperties;
 @property (nonatomic, retain) id <NSObject> context;
 @property (nonatomic, copy) NSArray *passthroughViews;
+@property (nonatomic, retain) UIView *anchorView;
 
 - (id)initWithContentViewController:(UIViewController *)theContentViewController;
 

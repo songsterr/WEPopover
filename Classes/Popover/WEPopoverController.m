@@ -35,6 +35,7 @@
 @synthesize containerViewProperties;
 @synthesize context;
 @synthesize passthroughViews;
+@synthesize anchorView;
 
 - (id)init {
 	if ((self = [super init])) {
@@ -68,6 +69,7 @@
 	[contentViewController release];
 	[containerViewProperties release];
 	[passthroughViews release];
+    [anchorView release];
 	self.context = nil;
 	[super dealloc];
 }
@@ -140,7 +142,7 @@
     // Store original values for repositioning
     anchorRect = rect;
     permittedArrowDirections = arrowDirections;
-    anchorView = theView;
+    self.anchorView = theView;
 	
 	//First force a load view for the contentViewController so the popoverContentSize is properly initialized
 	contentViewController.view;

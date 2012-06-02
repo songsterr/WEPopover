@@ -25,7 +25,7 @@
  */
 @interface WEPopoverController : NSObject<WETouchableViewDelegate> {
 	UIViewController *contentViewController;
-	UIView *__weak view;
+	UIView *view;
 	WETouchableView *backgroundView;
 	
 	BOOL popoverVisible;
@@ -43,7 +43,7 @@
 
 @property(nonatomic, strong) UIViewController *contentViewController;
 
-@property (nonatomic, readonly) UIView *view;
+@property (nonatomic, strong, readonly) UIView *view;
 @property (nonatomic, readonly, getter=isPopoverVisible) BOOL popoverVisible;
 @property (nonatomic, readonly) UIPopoverArrowDirection popoverArrowDirection;
 @property (nonatomic, unsafe_unretained) id <WEPopoverControllerDelegate> delegate;
